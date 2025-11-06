@@ -1,0 +1,63 @@
+# Importing required libraries
+from sklearn.feature_extraction.text import TfidfVectorizer  # Converts text into numerical TF-IDF features
+from sklearn.naive_bayes import ComplementNB                # Naive Bayes variant better for imbalanced classes
+from sklearn.model_selection import train_test_split        # Splits dataset into training and testing sets
+from sklearn.metrics import accuracy_score                  # Calculates accuracy of predictions
+import numpy as np                                          # Useful for numerical operations (optional here)
+
+# Step 1: Sample dataset of email messages
+# Each message is labeled as 1 = Spam, 0 = Not Spam
+messages = [
+    "Win money now", 
+    "Limited offer free", 
+    "Claim prize now",
+    "Lunch meeting tomorrow", 
+    "Project discussion today",
+    "Let's catch up soon", 
+    "Free entry to contest", 
+    "Win a free ticket"
+]
+labels = [1, 1, 1, 0, 0, 0, 1, 1]
+
+# Step 2: Split dataset into training and testing sets
+# test_size=0.25 → 25% of data for testing, 75% for training
+# random_state=42 → ensures reproducibility
+X_train, X_test, y_train, y_test = train_test_split(
+    messages, labels, test_size=0.25, random_state=42
+)
+
+# Step 3: Convert text messages to numerical features using TF-IDF
+# TF-IDF gives importance to words frequent in a message but rare overall
+tfidf = TfidfVectorizer()
+X_train_vec = tfidf.fit_transform(X_train)  # Learn vocabulary from training data & transform
+X_test_vec = tfidf.transform(X_test)        # Transform test data using same vocabulary
+
+# Step 4: Train the Complement Naive Bayes classifier
+# ComplementNB is better than MultinomialNB for imbalanced classes (like Spam vs Not Spam)
+model = ComplementNB()
+model.fit(X_train_vec, y_train)             # Train the model on training data
+
+# Step 5: Evaluate model on test data
+pred = model.predict(X_test_vec)            # Predict labels for test messages
+print("Accuracy:", round(accuracy_score(y_test, pred), 2))  # Print accuracy (0-1 scale)
+
+# Step 6: Take user input for a new email/message
+msg = input("\nEnter a message: ")
+msg_vec = tfidf.transform([msg])            # Convert input message to TF-IDF vector using same vocabulary
+
+# Step 7: Check if input contains any known words from training data
+if msg_vec.nnz == 0:                        # nnz = number of non-zero elements in the vector
+    print("⚠ No known words from training data. Unable to classify reliably.")
+else:
+    probs = model.predict_proba(msg_vec)[0]  # Predict probability for each class [Not Spam, Spam]
+    pred_label = model.predict(msg_vec)[0]   # Predict final class label
+    
+    # Print probabilities for both classes
+    print(f"Probability → Not Spam: {probs[0]:.2f}, Spam: {probs[1]:.2f}")
+    
+    # If model is unsure (probabilities close), warn user
+    if abs(probs[0] - probs[1]) < 0.2:
+        print("🤔 Model is unsure, treat this classification cautiously.")
+    
+    # Print final classification result with emoji
+    print("Result:", "🚨 Spam" if pred_label else "✅ Not Spam")
