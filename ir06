@@ -1,0 +1,38 @@
+# Dynamic PageRank for any number of pages and links
+# --------------------------------------------------
+
+import networkx as nx
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+
+# Step 1: Define a dynamic collection of webpages
+# Add as many pages and links as you want
+webpages = {
+    "page1.html": '<a href="page2.html">Link to Page 2</a> <a href="page3.html">Link to Page 3</a>',
+    "page2.html": '<a href="page3.html">Link to Page 3</a>',
+    "page3.html": '<a href="page1.html">Link to Page 1</a>',
+    "page4.html": '<a href="page3.html">Link to Page 3</a> <a href="page2.html">Link to Page 2</a>',
+    "page5.html": '<a href="page1.html">Link to Page 1</a> <a href="page3.html">Link to Page 3</a>'
+}
+
+# Step 2: Create a directed graph
+G = nx.DiGraph()
+
+# Step 3: Add nodes and edges dynamically
+for page, html in webpages.items():
+    G.add_node(page)  # Add each page as a node
+    soup = BeautifulSoup(html, "html.parser")  # Parse HTML to extract links
+
+    # Add directed edges for all links that exist in the dictionary
+    for link in soup.find_all("a", href=True):
+        href = urljoin(page, link["href"])  # Handle relative URLs
+        if href in webpages:                # Only link to pages in our set
+            G.add_edge(page, href)         # Directed edge: current page → linked page
+
+# Step 4: Compute PageRank for the graph
+pr = nx.pagerank(G, alpha=0.85)  # alpha=0.85 is the probability of following links
+
+# Step 5: Display results sorted by PageRank
+print("\nWeb PageRank Results (Highest to Lowest):")
+for page, rank in sorted(pr.items(), key=lambda x: x[1], reverse=True):
+    print(f"{page}: {round(rank, 4)}")
